@@ -1,0 +1,104 @@
+/* colors */
+:root {
+    --darkBlue: #217093;
+    --medBlue: #4eb8dd;
+    --lightBlue: #ddf1fa;
+    --inputBG: #f3fafd;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #eff3f4;
+    font-size: 16px;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+form {
+    display: block;
+    width: 100%;
+    max-width: 1000px;
+    background-color: #FFF;
+    padding: 2.25em;
+    box-sizing: border-box;
+    border: solid 1px #DDD;
+    border-radius: .5em;
+    box-shadow: 0 10px 30px rgba(0,0,0,.2);
+}
+
+input,
+button {
+    display: block;
+    width: 100%;
+    padding: .5em .25em;
+    border-radius: .25em;
+    border: none;
+    box-sizing: border-box;
+    margin: 0 0 1.5em;
+}
+
+input {
+    background-color: var(--inputBG);
+    box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    border: solid 1px rgba(0,0,0,.1);
+}
+
+input:focus {
+    outline: none;
+    box-shadow: 0 0 8px var(--lightBlue);
+}
+
+label {
+    font-size: .9em;
+    font-weight: 600;
+    color: #777;
+}
+
+button {
+    font-size: 1.1em;
+    background-color: var(--darkBlue);
+    color: #FFF;
+    font-weight: 700;
+    padding: .5em 0;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s ease;
+}
+
+button:hover {
+    background-color: var(--medBlue);
+}
+
+.svgContainer {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 1.5em;
+}
+
+.mySVG {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+body, .svgContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.helper {
+    display: block;
+    font-size: .85em;
+    color: #999;
+    margin-top: -.75em;
+    margin-bottom: 1.5em;
+    text-align: right;
+}
