@@ -14,6 +14,40 @@ def load_dicom_directory(directory):
     reader.Update()
     return reader
 
+def add_roi_widget(renderer, interactor, volumeMapper, renWin):
+    # Create the box widget for ROI selection
+    roi_widget = vtk.vtkBoxWidget()
+    roi_widget.SetInteractor(interactor)
+    roi_widget.SetPlaceFactor(1.0)  # Set initial size of the box
+
+    # Lấy bounds của volume (ảnh render)
+    volume_bounds = [0] * 6
+    volume.GetBounds(volume_bounds)
+
+    # Đặt ROI Box bao quanh volume
+    roi_widget.SetPlaceFactor(1.0)  # Đặt hệ số phóng đại vùng ROI bằng 1.0 để không mở rộng thêm
+    roi_widget.PlaceWidget(volume_bounds)  # Đặt widget theo bounds của volume
+    roi_widget.On()  # Bật ROI Box để hiển thị
+
+    # Đảm bảo rằng khi ROI Box thay đổi, nó sẽ cập nhật đúng các giới hạn cho Volume
+    def on_roi_changed(widget, event):
+        # Create a vtkPolyData object to store the ROI box
+        box_polydata = vtk.vtkPolyData()
+        widget.GetPolyData(box_polydata)  # Get the PolyData from the widget
+
+        # Compute the bounds of the PolyData
+        box_bounds = [0] * 6
+        box_polydata.GetBounds(box_bounds)  # Compute the bounds of the PolyData
+
+        # Update Volume Mapper to only show data within the ROI
+        volumeMapper.SetCroppingRegionPlanes(box_bounds)
+        volumeMapper.CroppingOn()  # Enable cropping based on the ROI
+        renWin.Render()
+
+    # Gắn callback cho sự kiện thay đổi của ROI Box
+    roi_widget.AddObserver(vtk.vtkCommand.InteractionEvent, on_roi_changed)
+
+    return roi_widget
 
 # Create the renderer, the render window, and the interactor.
 ren = vtk.vtkRenderer()
@@ -23,7 +57,6 @@ iren = vtk.vtkRenderWindowInteractor()
 iren.SetRenderWindow(renWin)
 
 # Use vtkDICOMImageReader to read DICOM files
-# Select the directory containing DICOM data
 dicom_directory = select_directory()
 reader = load_dicom_directory(dicom_directory)
 reader.Update()
@@ -80,6 +113,10 @@ camera.SetViewUp(0, 0, -1)
 
 # Increase the size of the render window
 renWin.SetSize(1000, 1000)
+
+# Add ROI Widget to the scene
+roi_widget = add_roi_widget(ren, iren, volumeMapper, renWin)
+roi_widget.On()
 
 # Create a vtkSliderWidget for opacity control
 opacityWidget = vtk.vtkSliderWidget()
@@ -197,65 +234,42 @@ def onBlueChanged(widget, event):
     value = widget.GetRepresentation().GetValue()
     updateColorFunction(sliderRepRed.GetValue(), sliderRepGreen.GetValue(), value)  # Update blue channel (index 2)
 
-# Create vtkSliderWidgets for RGB color control
-redWidget = vtk.vtkSliderWidget()
-redWidget.SetInteractor(iren)
-redWidget.SetRepresentation(sliderRepRed)
-redWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onRedChanged)
-
-greenWidget = vtk.vtkSliderWidget()
-greenWidget.SetInteractor(iren)
-greenWidget.SetRepresentation(sliderRepGreen)
-greenWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onGreenChanged)
-
-blueWidget = vtk.vtkSliderWidget()
-blueWidget.SetInteractor(iren)
-blueWidget.SetRepresentation(sliderRepBlue)
-blueWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onBlueChanged)
-
-# Create vtkSliderWidget for density control
-densityWidget = vtk.vtkSliderWidget()
-densityWidget.SetInteractor(iren)
-sliderRepDensity = vtk.vtkSliderRepresentation2D()
-
-# Set density slider properties
-sliderRepDensity.SetValue(volumeGradientOpacity.GetValue(90))  # Initialize slider with default density value
-sliderRepDensity.SetTitleText("Density")
-sliderRepDensity.SetMinimumValue(0.0)
-sliderRepDensity.SetMaximumValue(1.0)
-sliderRepDensity.GetSliderProperty().SetColor(0, 0, 1)  # Slider color
-sliderRepDensity.GetTubeProperty().SetColor(1, 1, 1)   # Tube color
-
-# Set title text properties
-titleTextPropertyDensity = sliderRepDensity.GetTitleProperty()
-titleTextPropertyDensity.SetColor(0, 0, 1)  # Title color
-
-# Set slider position to top-right corner
-sliderRepDensity.GetPoint1Coordinate().SetCoordinateSystemToNormalizedDisplay()
-sliderRepDensity.GetPoint1Coordinate().SetValue(0.7, 0.85)
-sliderRepDensity.GetPoint2Coordinate().SetCoordinateSystemToNormalizedDisplay()
-sliderRepDensity.GetPoint2Coordinate().SetValue(0.95, 0.85)
-
-densityWidget.SetRepresentation(sliderRepDensity)
-
-# Callback function for density slider interaction
+# Callback function for opacity slider interaction
 def onDensityChanged(widget, event):
     value = widget.GetRepresentation().GetValue()
-    volumeGradientOpacity.RemoveAllPoints()
-    volumeGradientOpacity.AddPoint(0, 0.0)
-    volumeGradientOpacity.AddPoint(90, value)
-    volumeGradientOpacity.AddPoint(100, value)
+    volumeScalarOpacity.RemoveAllPoints()
+    volumeScalarOpacity.AddPoint(0, 0.0)
+    volumeScalarOpacity.AddPoint(500, value)
+    volumeScalarOpacity.AddPoint(1000, value)
+    volumeScalarOpacity.AddPoint(1150, 0.85)
     renWin.Render()
 
-densityWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onDensityChanged)
+opacityWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onOpacityChanged)
+sliderRedWidget = vtk.vtkSliderWidget()
+sliderRedWidget.SetInteractor(iren)
+sliderRedWidget.SetRepresentation(sliderRepRed)
+sliderRedWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onRedChanged)
 
+sliderGreenWidget = vtk.vtkSliderWidget()
+sliderGreenWidget.SetInteractor(iren)
+sliderGreenWidget.SetRepresentation(sliderRepGreen)
+sliderGreenWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onGreenChanged)
+
+sliderBlueWidget = vtk.vtkSliderWidget()
+sliderBlueWidget.SetInteractor(iren)
+sliderBlueWidget.SetRepresentation(sliderRepBlue)
+sliderBlueWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onBlueChanged)
+
+densityWidget = vtk.vtkSliderWidget()
+densityWidget.SetInteractor(iren)
+densityWidget.AddObserver(vtk.vtkCommand.InteractionEvent, onDensityChanged)
 
 # Start interaction
 iren.Initialize()
 renWin.Render()
 opacityWidget.On()
-redWidget.On()
-greenWidget.On()
-blueWidget.On()
+sliderRedWidget.On()
+sliderGreenWidget.On()
+sliderBlueWidget.On()
 densityWidget.On()
 iren.Start()
