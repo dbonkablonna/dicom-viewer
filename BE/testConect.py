@@ -1,20 +1,32 @@
-# app.py (backend)
+import tempfile
 from pathlib import Path
 
 from flask import Flask, request, send_file
 import vtk
 import os
 from io import BytesIO
+import shutil
 
 app = Flask(__name__)
 
 
-# Function to load DICOM directory
-def load_dicom_directory(directory):
+# Function to load DICOM files from a temporary directory
+def load_dicom_files(files):
+    # Create a temporary directory to store the files
+    temp_dir = tempfile.mkdtemp()
+    print(f"Temporary directory created: {temp_dir}")
+    for file in files:
+        # Replace any directory structure in the filename with an underscore
+        filename = os.path.basename(file.filename).replace('/', '_').replace('\\', '_')
+        full_path = os.path.join(temp_dir, filename)
+        print(f"Saving file to: {full_path}")
+        file.save(full_path)
+
     reader = vtk.vtkDICOMImageReader()
-    reader.SetDirectoryName(directory)
+    reader.SetDirectoryName(temp_dir)
     reader.Update()
-    return reader
+
+    return reader, temp_dir  # Return the directory path so it can be cleaned up later
 
 
 # Global variables for storing VTK objects
@@ -27,30 +39,14 @@ renWin = None
 def render_image():
     global volume, volumeProperty, renWin
 
-    # # Get the folder path
-    # directory = request.files['folder'].filename
-    # folder = request.form['folder']
-    # print(f"Received folder: {folder}")
-    #
-    # folder_path = Path(folder).resolve()  # Chuyển thành đường dẫn tuyệt đối
-    #
-    # # In ra đường dẫn tuyệt đối để kiểm tra
-    # print(f"Using absolute path: {folder_path}")
+    # Collect the uploaded files
+    files = request.files.getlist('files[]')
 
+    if not files:
+        return "No files uploaded", 400
 
-    # # Load the DICOM data
-    # reader = vtk.vtkDICOMImageReader()
-    # reader.SetDirectoryName(str(folder_path))  # Sử dụng đường dẫn tuyệt đối
-    # reader.Update()
-
-    # Get the folder path
-    directory = request.files['folder'].filename
-
-    # Load the DICOM data
-    reader = load_dicom_directory(directory)
-    reader.Update()
-
-
+    # Load the DICOM files
+    reader, temp_dir = load_dicom_files(files)
 
     # Create the volume mapper and other VTK objects if not already created
     if not volume:
@@ -110,6 +106,9 @@ def render_image():
     writer.SetWriteToMemory(True)
     writer.WriteToBuffer(buffer)
     buffer.seek(0)
+
+    # Clean up the temporary directory after processing
+    shutil.rmtree(temp_dir)
 
     return send_file(buffer, mimetype='image/png')
 
