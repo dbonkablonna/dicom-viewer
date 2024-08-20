@@ -206,19 +206,24 @@ function App() {
     const [blue, setBlue] = useState(1.0);
     const [density, setDensity] = useState(1.0);
 
-    const handleFolderChange = (event) => {
-        const folder = event.target.files[0].webkitRelativePath.split('/')[0];
-        setSelectedFolder(folder);
+    const handleFolderChange = async (event) => {
+        const files = event.target.files;
+        setSelectedFolder(files);
+
+        // Automatically trigger the upload after selecting files
+        await handleUpload(files);
     };
 
-    const handleUpload = async () => {
-        if (!selectedFolder) {
+    const handleUpload = async (files) => {
+        if (!files) {
             alert('Please select a folder first.');
             return;
         }
 
         const formData = new FormData();
-        formData.append('folder', selectedFolder);  // Gửi tên thư mục
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files[]', files[i]);
+        }
 
         try {
             const response = await axios.post('http://localhost:5000/render', formData, {
@@ -234,7 +239,6 @@ function App() {
         }
     };
 
-
     const handleSliderChange = async (event, setter, sliderName) => {
         const value = event.target.value;
         setter(value);
@@ -243,7 +247,7 @@ function App() {
             await axios.post('http://localhost:5000/update-sliders', {
                 [sliderName]: value
             });
-            handleUpload();  // Re-render the image with new settings
+            handleUpload(selectedFolder);  // Re-render the image with new settings
         } catch (error) {
             console.error('Error updating sliders:', error);
         }
@@ -261,7 +265,6 @@ function App() {
                             directory=""
                             onChange={handleFolderChange}
                         />
-                        <button onClick={handleUpload}>Open</button>
                     </div>
                     <div className="slider-container">
                         <div className="slider-group">
@@ -325,4 +328,6 @@ function App() {
 }
 
 export default App;
+
+
 
